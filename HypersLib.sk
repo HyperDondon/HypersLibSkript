@@ -1,5 +1,18 @@
-#Version HYPER-COMMISSION-USE
+#Version HYPER-COMMISSION-USE-V1.1
+
+#Requirements
+#Modern Skript, 2.9+ (mostly tested on 2.10)
+#Skript-Reflect
+#SkBee
+#SkQuery
+
+#Change this to your plugin/script's name
+#If you change this after storing data with tags, they will no longer work
+options:
+	pluginname: hyperslib
+
 #Reminds the user to enable memory variables once they restart the server with the library for the first time and then later.
+ 
 on skript start:
 	if {-Memory_variable} is set:
 		send "&ePlease enable memory variables for much better performance and near 0 lag, they are easy to enable." to console
@@ -13,6 +26,12 @@ import:
 	java.lang.System
 	org.bukkit.Bukkit
 	java.lang.Character
+	org.bukkit.event.player.PlayerInteractEntityEvent
+	org.bukkit.event.player.PlayerInteractEvent
+	org.bukkit.inventory.EquipmentSlot
+	org.bukkit.persistence.PersistentDataHolder
+	org.bukkit.persistence.PersistentDataContainer
+	org.bukkit.persistence.PersistentDataType
 
 #Checks if version is 1.20.4 or lower. At 1.20.5, Mojang has changed the NBT formatDouble and so has the server APIs. The change to the Bukkit API have been drastic.
 local function isAtAPIChange() :: boolean:
@@ -40,6 +59,11 @@ local function isAtAPIChange() :: boolean:
 condition server[(-| )version] is at [bukkit(-| )](API|api) change:
 	check:
 		isAtAPIChange() is true
+		continue
+
+condition server[(-| )version] (is not|isn't) at [bukkit(-| )](API|api) change:
+	check:
+		isAtAPIChange() is false
 		continue
 	
 
@@ -131,6 +155,7 @@ function getActionBarCooldown(cooldow: text, show_decimal: boolean = false) :: t
 	
 	return {_cooldown}
 
+#Makes the item unremovable from your inventory
 function addUnremovableItem(i: item, checkName: boolean = true, checkLore: boolean = true):
 	if {-UnremovableItems::*} is set:
 		set {_size} to size of {-UnremovableItems::*} + 1
@@ -140,6 +165,7 @@ function addUnremovableItem(i: item, checkName: boolean = true, checkLore: boole
 	set {-UnremovableItems::checkNames::%{_size}%} to {_checkName}
 	set {-UnremovableItems::checkLore::%{_size}%} to {_checkLore}
 
+#Checks if an item is removable
 function isUnremovable(i: item) :: boolean:
 	loop {-UnremovableItems::*}:
 		if loop-value is {_i}:
@@ -190,10 +216,30 @@ on inventory click:
 	player cannot hold 1 water bucket #water buckets dont stack, good for this case
 	cancel event
 
+on PlayerInteractEntityEvent:
+	event.getRightClicked() is an item frame
+	if event.getHand() is EquipmentSlot.HAND:
+		isUnremovable(event.getPlayer()'s held item) is true
+		event.setCancelled(true)
+
+	if event.getHand() is EquipmentSlot.OFF_HAND:
+		isUnremovable(event.getPlayer()'s off hand item) is true
+		event.setCancelled(true)
+
+on PlayerInteractEvent:
+	event.getClickedBlock() is a decorated pot
+	if event.getHand() is EquipmentSlot.HAND:
+		isUnremovable(event.getPlayer()'s held item) is true
+		event.setCancelled(true)
+
+	if event.getHand() is EquipmentSlot.OFF_HAND:
+		isUnremovable(event.getPlayer()'s off hand item) is true
+		event.setCancelled(true)
+
 local function toSmallCaps(s: text) :: text:
-#---&7&lNormal no caps and caps
+#---Normal no caps and caps
 	set {_Replace_NormalText::*} to "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y" and "Z" #!RAT was here, Added a Y, you dumbass hyper.
-#---&7&lSmall caps
+#---Small caps
 	set {_Replace_SmallText::*} to "ᴀ", "ʙ", "ᴄ", "ᴅ", "ᴇ", "ғ", "ɢ", "ʜ", "ɪ", "ᴊ", "ᴋ", "ʟ", "ᴍ", "ɴ", "ᴏ", "ᴘ", "ᴏ̨", "ʀ", "s", "ᴛ", "ᴜ", "ᴠ", "ᴡ", "x", "ʏ" and "ᴢ"
 	set {_newstring} to ""
 	set {_skip} to false
@@ -204,22 +250,72 @@ local function toSmallCaps(s: text) :: text:
 		loop {_Replace_NormalText::*}:
 			if {_skip} is true:
 				continue
-			if Character.isLetter({_set}.toUpperCase()) is not true: #&7&l<--Remove .toUpperCase() to make the skip capital letters work
+			if Character.isLetter({_set}.toUpperCase()) is not true: #<--Remove .toUpperCase() to make the skip capital letters work
 				add {_set} to {_newstring}
 				set {_skip} to true
 				continue
-			#if Character.isLowerCase({_set}) is not true: &7&l<--Skip capital letters
-				#add {_set} to {_newstring}
-				#set {_skip} to true
-				#continue
 			if loop-value-2 is {_set}:
 				add {_Replace_SmallText::%loop-iteration-2%} to {_newstring}
 		set {_skip} to false
 	return {_newstring}
 	
-expression small caps from %strings%:
+expression:
+	patterns:
+		small caps from %strings%
+		%strings% as small caps
+		%strings% to small caps
 	get:
 		set {_strings::*} to expr-1
 		loop {_strings::*}:
 			add toSmallCaps(loop-value) to {_list::*}
 		return {_list::*}
+
+#All geyser/bedrock players have a uuid that start with 00000000-0000-0000-000
+#No Java player would be able to get this uuid, it's not a valid UUID that could be generated from Mojang.
+condition %player% is [a] (bedrock|geyser|floodgate) player:
+    check:
+        expr-1's uuid starts with "00000000"
+        continue
+condition %player% (is not|isn't) [a] (bedrock|geyser|floodgate) player:
+    check:
+        expr-1's uuid doesn't start with "00000000"
+        continue
+
+#Simple tab syntax for items, used to store data easily
+expression %itemtype% with [string] [custom] [nbt[ tag]] data %string% (as|to| set to) %string%:
+	get:
+		set {_item} to expr-1
+		set {_name} to expr-2
+		set {_value} to expr-3
+		if server is not at api change:
+			set string tag "PublicBukkitValues;{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
+		else:
+			set string tag "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
+		return {_item}
+
+condition %itemstack% has [string] [custom] [nbt[ tag]] data %string% [(as|[set] to) %string%]:
+	check:
+		set {_item} to expr-1
+		set {_name} to expr-2
+		if expr-3 is set:
+			set {_value} to expr-3
+		if {_value} is not set:
+			if server is not at api change:
+				nbt compound of expr-1 has tag "PublicBukkitValues;{@pluginname}:%{_name}%"
+				continue
+			else:
+				nbt compound of expr-1 has tag "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%"
+				continue
+		else:
+			if server is not at api change:
+				if nbt compound of expr-1 doesn't have tag "PublicBukkitValues;{@pluginname}:%{_name}%":
+					stop
+			else:
+				if nbt compound of expr-1 doesn't have tag "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%":
+					stop
+			if server is not at api change:
+				set {_tag} to "PublicBukkitValues;{@pluginname}:%{_name}%"
+			else:
+				set {_tag} to "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%"
+			"%string tag {_tag} of nbt compound of {_item}%" is {_value}
+			continue
