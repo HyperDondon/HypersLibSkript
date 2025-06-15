@@ -237,33 +237,48 @@ on PlayerInteractEvent:
 		event.setCancelled(true)
 
 local function toSmallCaps(s: text) :: text:
-#---Normal no caps and caps
-	set {_Replace_NormalText::*} to "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y" and "Z" #!RAT was here, Added a Y, you dumbass hyper.
-#---Small caps
-	set {_Replace_SmallText::*} to "ᴀ", "ʙ", "ᴄ", "ᴅ", "ᴇ", "ғ", "ɢ", "ʜ", "ɪ", "ᴊ", "ᴋ", "ʟ", "ᴍ", "ɴ", "ᴏ", "ᴘ", "ᴏ̨", "ʀ", "s", "ᴛ", "ᴜ", "ᴠ", "ᴡ", "x", "ʏ" and "ᴢ"
-	set {_newstring} to ""
+	set {_normalText::*} to "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y" and "Z" #!RAT was here, Added a Y, you dumbass hyper.
+	set {_smallText::*} to "ᴀ", "ʙ", "ᴄ", "ᴅ", "ᴇ", "ғ", "ɢ", "ʜ", "ɪ", "ᴊ", "ᴋ", "ʟ", "ᴍ", "ɴ", "ᴏ", "ᴘ", "ᴏ̨", "ʀ", "s", "ᴛ", "ᴜ", "ᴠ", "ᴡ", "x", "ʏ" and "ᴢ"
+	set {_newString} to ""
 	set {_skip} to false
+	set {_s} to raw {_s}
 	loop {_s}'s length times:
 		set {_value} to (loop-iteration-1) - 1
 		set {_skip} to false
 		set {_set} to char at {_value} in {_s}
-		loop {_Replace_NormalText::*}:
+		loop {_normalText::*}:
 			if {_skip} is true:
 				continue
-			if Character.isLetter({_set}.toUpperCase()) is not true: #<--Remove .toUpperCase() to make the skip capital letters work
-				add {_set} to {_newstring}
+			if {_noColor} isn't true:
+				if {_set} is "&":
+					if char at {_value} + 1 in {_s} is "&":
+						set {_noColor} to true
+						exit 4 sections
+					add {_set} to {_newString}
+					set {_skip} to true
+					set {_nextSkipAdd} to true
+					continue
+				if {_nextSkipAdd} is true:
+					{_noColor} isn't true
+					add {_set} to {_newString}
+					set {_skip} to true
+					delete {_nextSkipAdd}
+					continue
+			else:
+				delete {_noColor}
+			if Character.isLetter({_set}.toUpperCase()) is not true:
+				add {_set} to {_newString}
 				set {_skip} to true
 				continue
 			if loop-value-2 is {_set}:
-				add {_Replace_SmallText::%loop-iteration-2%} to {_newstring}
+				add {_smallText::%loop-iteration-2%} to {_newString}
 		set {_skip} to false
-	return {_newstring}
+	return colored {_newString}
 	
 expression:
 	patterns:
 		small caps from %strings%
-		%strings% as small caps
-		%strings% to small caps
+		%strings% (as|to) small caps
 	get:
 		set {_strings::*} to expr-1
 		loop {_strings::*}:
