@@ -5,6 +5,7 @@
 #Skript-Reflect
 #SkBee
 #SkQuery
+#PaperMC or derivatives for NMS based things
 
 #Change this to your plugin/script's name
 #If you change this after storing data with tags, they will no longer work
@@ -17,7 +18,7 @@ on skript start:
 	if {-Memory_variable} is set:
 		send "&ePlease enable memory variables for much better performance and near 0 lag, they are easy to enable." to console
 		send "&ePlease read https://sovdee.gitbook.io/skript-tutorials/core-concepts/variables/memory-variables-metadata-and-alternatives" to console
-		send "&eIf you still don't know how to, DM hyperdondonreal on discord and ask for help." to console
+		send "&eIf you still don't know how to, DM hyperdondonreal on Discord and ask for help." to console
 	set {-Memory_variable} to true
 
 #Import Java classes to be able to use
@@ -32,6 +33,26 @@ import:
 	org.bukkit.persistence.PersistentDataHolder
 	org.bukkit.persistence.PersistentDataContainer
 	org.bukkit.persistence.PersistentDataType
+
+	#NMS. We are using Mojang mappings, so, PaperMC is required.
+	#Entities
+	net.minecraft.world.entity.EntityType
+	net.minecraft.world.entity.monster.EnderMan
+	net.minecraft.world.entity.monster.Creeper
+	net.minecraft.world.entity.monster.CaveSpider
+	net.minecraft.world.entity.monster.Spider
+	#Packets
+	net.minecraft.network.protocol.game.ClientboundAddEntityPacket
+	net.minecraft.network.protocol.game.ClientboundSetCameraPacket
+	net.minecraft.network.protocol.game.ClientboundRespawnPacket
+	net.minecraft.network.protocol.game.ClientboundSetPassengersPacket
+	net.minecraft.network.protocol.game.ClientboundSetEntityLinkPacket
+	net.minecraft.network.protocol.game.ClientboundCooldownPacket
+	#Other Objects
+	net.minecraft.core.BlockPos
+	net.minecraft.world.phys.AABB
+	#Not NMS, used for NMS parts
+	org.bukkit.entity.Mob
 
 #Checks if version is 1.20.4 or lower. At 1.20.5, Mojang has changed the NBT formatDouble and so has the server APIs. The change to the Bukkit API have been drastic.
 local function isAtAPIChange() :: boolean:
@@ -65,7 +86,12 @@ condition server[(-| )version] (is not|isn't) at [bukkit(-| )](API|api) change:
 	check:
 		isAtAPIChange() is false
 		continue
-	
+
+#Returns a random location out of a location within a radius.
+function getRTP(loc: location, radius: int) :: location:
+	set {_x} to x coord of {_loc} + (random integer between ({_radius}-{_radius}-{_radius}) and {_radius})
+	set {_z} to z coord of {_loc} + (random integer between ({_radius}-{_radius}-{_radius}) and {_radius})
+	return location of highest block at location at ({_x}, 0, {_z}) in world of {_loc}
 
 #Changes number without a decimal number to have one.
 function formatDouble(num: number) :: string:
@@ -76,29 +102,29 @@ function formatDouble(num: number) :: string:
 
 #Gets the cooldown variable
 function getCooldown(cooldown: text) :: int:
-	return {-Cooldown::%{_cooldown}%}
+	return {-@pluginname::Cooldown::%{_cooldown}%}
 
 #Gets the cooldown's seconds, does not return the whole cooldown in seconds.
 function getCooldownSeconds(cooldown: text) :: int:
-	add Duration.ofMillis({-Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toSecondsPart() to {_coo}
+	add Duration.ofMillis({-@pluginname::Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toSecondsPart() to {_coo}
 	if {_coo} is 60:
 		set {_coo} to 0
 	return {_coo}
 
 #Gets the cooldown's minutes.
 function getCooldownMinutes(cooldown: text) :: int:
-	set {_coo} to Duration.ofMillis({-Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toMinutes()
-	if Duration.ofMillis({-Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toSecondsPart() is 60:
+	set {_coo} to Duration.ofMillis({-@pluginname::Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toMinutes()
+	if Duration.ofMillis({-@pluginname::Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toSecondsPart() is 60:
 		add 1 to {_coo}
 	return {_coo}
 	
 #Sets the cooldown. 2nd argument (cooldown to be set) must be in milliseconds. Use toMilliseconds().
 function setCooldown(cooldown: text, value: number):
-	set {-Cooldown::%{_cooldown}%} to System.currentTimeMillis() + {_value}
+	set {-@pluginname::Cooldown::%{_cooldown}%} to System.currentTimeMillis() + {_value}
 
 #Checks if a cooldown exists, what else?
 function doesCooldownExist(cooldown: text) :: boolean:
-	if {-Cooldown::%{_cooldown}%} is set:
+	if {-@pluginname::Cooldown::%{_cooldown}%} is set:
 		return true
 	else:
 		return false
@@ -238,7 +264,7 @@ on PlayerInteractEvent:
 
 local function toSmallCaps(s: text) :: text:
 	set {_normalText::*} to "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y" and "Z" #!RAT was here, Added a Y, you dumbass hyper.
-	set {_smallText::*} to "ᴀ", "ʙ", "ᴄ", "ᴅ", "ᴇ", "ғ", "ɢ", "ʜ", "ɪ", "ᴊ", "ᴋ", "ʟ", "ᴍ", "ɴ", "ᴏ", "ᴘ", "ᴏ̨", "ʀ", "s", "ᴛ", "ᴜ", "ᴠ", "ᴡ", "x", "ʏ" and "ᴢ"
+	set {_smallText::*} to "ᴀ", "ʙ", "ᴄ", "ᴅ", "ᴇ", "ғ", "ɢ", "ʜ", "ɪ", "ᴊ", "ᴋ", "ʟ", "ᴍ", "ɴ", "ᴏ", "ᴘ", "ǫ", "ʀ", "s", "ᴛ", "ᴜ", "ᴠ", "ᴡ", "x", "ʏ" and "ᴢ"
 	set {_newString} to ""
 	set {_skip} to false
 	set {_s} to raw {_s}
@@ -303,9 +329,9 @@ expression %itemtype% with [string] [custom] [nbt[ tag]] data %string% (as|to| s
 		set {_name} to expr-2
 		set {_value} to expr-3
 		if server is not at api change:
-			set string tag "PublicBukkitValues;{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
+			set string tag "PublicBukkitValues{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
 		else:
-			set string tag "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
+			set string tag "minecraft:custom_data;PublicBukkitValues{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
 		return {_item}
 
 condition %itemstack% has [string] [custom] [nbt[ tag]] data %string% [(as|[set] to) %string%]:
@@ -316,21 +342,103 @@ condition %itemstack% has [string] [custom] [nbt[ tag]] data %string% [(as|[set]
 			set {_value} to expr-3
 		if {_value} is not set:
 			if server is not at api change:
-				nbt compound of expr-1 has tag "PublicBukkitValues;{@pluginname}:%{_name}%"
+				nbt compound of expr-1 has tag "PublicBukkitValues{@pluginname}:%{_name}%"
 				continue
 			else:
-				nbt compound of expr-1 has tag "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%"
+				nbt compound of expr-1 has tag "minecraft:custom_data;PublicBukkitValues{@pluginname}:%{_name}%"
 				continue
 		else:
 			if server is not at api change:
-				if nbt compound of expr-1 doesn't have tag "PublicBukkitValues;{@pluginname}:%{_name}%":
+				if nbt compound of expr-1 doesn't have tag "PublicBukkitValues{@pluginname}:%{_name}%":
 					stop
 			else:
-				if nbt compound of expr-1 doesn't have tag "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%":
+				if nbt compound of expr-1 doesn't have tag "minecraft:custom_data;PublicBukkitValues{@pluginname}:%{_name}%":
 					stop
 			if server is not at api change:
-				set {_tag} to "PublicBukkitValues;{@pluginname}:%{_name}%"
+				set {_tag} to "PublicBukkitValues{@pluginname}:%{_name}%"
 			else:
-				set {_tag} to "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%"
+				set {_tag} to "minecraft:custom_data;PublicBukkitValues{@pluginname}:%{_name}%"
 			"%string tag {_tag} of nbt compound of {_item}%" is {_value}
 			continue
+
+#We are using NMS here. Code from PoaSK.
+#Only supports enderman, creeper, spider, cave spider, and player (default for players, duh)
+effect:
+	patterns:
+		change vision of %players% to [entity] %entitytype%
+		change %players%'s vision to [entity] %entitytype%
+	parse:
+		#Create errors for unsupported entities
+		if any:
+			"%expr-2%" is "enderman"
+			"%expr-2%" is "creeper"
+			"%expr-2%" is "spider"
+			"%expr-2%" is "cave spider"
+			"%expr-2%" is "player"
+		then:
+			continue
+	trigger:
+		set {_players::*} to expr-1
+		loop {_players::*}:
+			setVision(loop-value, expr-2)
+
+local function setVision(player: player, entity: object):
+	set {_serverPlayer} to {_player}.getHandle()
+	set {_serverLevel} to {_player}.getWorld().getHandle()
+	
+	if "%{_entity}%" is "enderman":
+		set {_NMSEntity} to new EnderMan(EntityType.ENDERMAN, {_serverLevel})
+	else if "%{_entity}%" is "creeper":
+		set {_NMSEntity} to new Creeper(EntityType.CREEPER, {_serverLevel})
+	else if "%{_entity}%" is "spider":
+		set {_NMSEntity} to new Spider(EntityType.SPIDER, {_serverLevel})
+	else if "%{_entity}%" is "cave_spider":
+		set {_NMSEntity} to new CaveSpider(EntityType.CAVE_SPIDER, {_serverLevel})
+	else if "%{_entity}%" is "player":
+		{_serverPlayer}.connection.send(new ClientboundSetCameraPacket({_serverPlayer}))
+		stop
+
+	{_serverPlayer}.connection.send(new ClientboundAddEntityPacket({_NMSEntity}, 0, BlockPos.ZERO))
+	{_serverPlayer}.connection.send(new ClientboundSetCameraPacket({_NMSEntity}))
+
+	refreshPlayer({_player})
+
+effect refresh %players%:
+	trigger:
+		set {_players::*} to expr-1
+		loop {_players::*}:
+			refreshPlayer(loop-value)
+
+local function refreshPlayer(player: player):
+	set {_serverPlayer} to {_player}.getHandle()
+	set {_serverLevel} to {_player}.getWorld().getHandle()
+
+	{_serverPlayer}.connection.send(new ClientboundRespawnPacket({_serverPlayer}.createCommonSpawnInfo({_serverLevel}), ClientboundRespawnPacket.KEEP_ALL_DATA))
+	{_serverPlayer}.connection.teleport({_player}.getLocation())
+
+	if ({_serverPlayer}.isPassenger()):
+		{_serverPlayer}.connection.send(new ClientboundSetPassengersPacket({_serverPlayer}.getVehicle()))
+
+	if ({_serverPlayer}.isVehicle()):
+		{_serverPlayer}.connection.send(new ClientboundSetPassengersPacket({_serverPlayer}))
+
+	set {_entities::*} to {_player}.getNearbyEntities(10, 10, 10)
+
+	loop {_entities::*}:
+		loop-value is an instance of Mob
+		set {_NMSMob} to loop-value.getHandle()
+		{_serverPlayer}.equals({_NMSMob}.getLeashHolder())
+		{_serverPlayer}.connection.send(new ClientboundSetEntityLinkPacket({_NMSMob}, {_serverPlayer}))
+
+	if {_serverPlayer}.getCooldowns().cooldowns.isEmpty() is not true:
+		set {_tickCount} to {_serverPlayer}.getCooldowns().tickCount
+		set {_cooldowns::*} to {_serverPlayer}.getCooldowns().cooldowns.entrySet()
+		loop {_cooldowns::*}:
+			{_serverPlayer}.connection.send(new ClientboundCooldownPacket(loop-value.getKey(), loop-value.getValue().endTime - {_tickCount}))
+
+	{_serverPlayer}.onUpdateAbilities()
+
+	#in 1.21.5, they made the server field private, this should not affect us here. As said here: https://tpgamesnl.gitbook.io/skript-reflect/code-conventions#:~:text=private%20members%20are%20visible%20and%20accessible%20by%20default.
+	{_serverPlayer}.server.getPlayerList().sendPlayerPermissionLevel({_serverPlayer})
+	{_serverPlayer}.server.getPlayerList().sendLevelInfo({_serverPlayer}, {_serverLevel})
+	{_serverPlayer}.server.getPlayerList().sendAllPlayerInfo({_serverPlayer})
