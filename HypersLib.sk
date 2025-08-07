@@ -1,4 +1,4 @@
-#Version HYPER-COMMISSION-USE-V1.1
+#Version HYPER-COMMISSION-USE-V1.2
 
 #Requirements
 #Modern Skript, 2.9+ (mostly tested on 2.10)
@@ -151,7 +151,7 @@ function toMilliseconds(minutes: int, seconds: int) :: int:
 #Returns cooldown in how it would look like in an action bar.
 function getActionBarCooldown(cooldow: text, show_decimal: boolean = false) :: text:
 	if isCooldownReady({_cooldow}) is true:
-		set {_cooldown} to "&aʀᴇᴀᴅʏ!"
+		set {_cooldown} to "&aReady!"
 	else:
 		if {_show_decimal} is false:
 			set {_cooldown_seconds} to getCooldownSeconds({_cooldow})
@@ -165,15 +165,15 @@ function getActionBarCooldown(cooldow: text, show_decimal: boolean = false) :: t
 		
 		if {_cooldown_minutes} > 0:
 			if {_cooldown_seconds} < 1:
-				set {_cooldown} to "%{_cooldown_minutes}%m"
+				set {_cooldown} to "&b%{_cooldown_minutes}%m"
 			else:
-				set {_cooldown} to "%{_cooldown_minutes}%m %{_cooldown_seconds}%s"
+				set {_cooldown} to "&b%{_cooldown_minutes}%m %{_cooldown_seconds}%s"
 		if {_cooldown_minutes} < 1:
 			if {_cooldown_seconds} > 0:
-				set {_cooldown} to "%{_cooldown_seconds}%s"
+				set {_cooldown} to "&b%{_cooldown_seconds}%s"
 
 		if {_cooldown} is not set:
-			set {_cooldown} to "&aʀᴇᴀᴅʏ!"
+			set {_cooldown} to "&aReady!"
 
 		if {_show_decimal} is true:
 			replace all "m" and "s" with "" in {_cooldown}
@@ -330,14 +330,27 @@ condition %player% (is not|isn't) [a] (bedrock|geyser|floodgate) player:
 
 #Simple tab syntax for items, used to store data easily
 expression %itemtype% with [string] [custom] [nbt[ tag]] data %string% (as|to| set to) %string%:
+	return type: item
 	get:
 		set {_item} to expr-1
 		set {_name} to expr-2
 		set {_value} to expr-3
 		if server is not at api change:
-			set string tag "PublicBukkitValues{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
+			set string tag "PublicBukkitValues;{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
 		else:
-			set string tag "minecraft:custom_data;PublicBukkitValues{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
+			set string tag "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
+		return {_item}
+
+expression %itemtype% with (int[eger]|number) [custom] [nbt[ tag]] data %string% (as|to| set to) %integer%:
+	return type: item
+	get:
+		set {_item} to expr-1
+		set {_name} to expr-2
+		set {_value} to expr-3
+		if server is not at api change:
+			set int tag "PublicBukkitValues;{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
+		else:
+			set int tag "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
 		return {_item}
 
 condition %itemstack% has [string] [custom] [nbt[ tag]] data %string% [(as|[set] to) %string%]:
@@ -348,22 +361,22 @@ condition %itemstack% has [string] [custom] [nbt[ tag]] data %string% [(as|[set]
 			set {_value} to expr-3
 		if {_value} is not set:
 			if server is not at api change:
-				nbt compound of expr-1 has tag "PublicBukkitValues{@pluginname}:%{_name}%"
+				nbt compound of expr-1 has tag "PublicBukkitValues;{@pluginname}:%{_name}%"
 				continue
 			else:
-				nbt compound of expr-1 has tag "minecraft:custom_data;PublicBukkitValues{@pluginname}:%{_name}%"
+				nbt compound of expr-1 has tag "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%"
 				continue
 		else:
 			if server is not at api change:
-				if nbt compound of expr-1 doesn't have tag "PublicBukkitValues{@pluginname}:%{_name}%":
+				if nbt compound of expr-1 doesn't have tag "PublicBukkitValues;{@pluginname}:%{_name}%":
 					stop
 			else:
-				if nbt compound of expr-1 doesn't have tag "minecraft:custom_data;PublicBukkitValues{@pluginname}:%{_name}%":
+				if nbt compound of expr-1 doesn't have tag "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%":
 					stop
 			if server is not at api change:
-				set {_tag} to "PublicBukkitValues{@pluginname}:%{_name}%"
+				set {_tag} to "PublicBukkitValues;{@pluginname}:%{_name}%"
 			else:
-				set {_tag} to "minecraft:custom_data;PublicBukkitValues{@pluginname}:%{_name}%"
+				set {_tag} to "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%"
 			"%string tag {_tag} of nbt compound of {_item}%" is {_value}
 			continue
 
