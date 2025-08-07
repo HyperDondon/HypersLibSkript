@@ -95,7 +95,7 @@ function getRTP(loc: location, radius: int) :: location:
 
 #Changes number without a decimal number to have one.
 function formatDouble(num: number) :: string:
-	if mod({_num}, 1) = 0:
+	if mod({_num}, 1) is 0:
 		return "%{_num}%.0"
 	else:
 		return "%{_num}%"
@@ -183,34 +183,40 @@ function getActionBarCooldown(cooldow: text, show_decimal: boolean = false) :: t
 
 #Makes the item unremovable from your inventory
 function addUnremovableItem(i: item, checkName: boolean = true, checkLore: boolean = true):
-	if {-UnremovableItems::*} is set:
-		set {_size} to size of {-UnremovableItems::*} + 1
+	if {-@pluginname::UnremovableItems::*} is set:
+		set {_size} to size of {-@pluginname::UnremovableItems::*} + 1
 	else:
 		set {_size} to 1
-	set {-UnremovableItems::%{_size}%} to {_i}
-	set {-UnremovableItems::checkNames::%{_size}%} to {_checkName}
-	set {-UnremovableItems::checkLore::%{_size}%} to {_checkLore}
+	set {-@pluginname::UnremovableItems::%{_size}%} to {_i}
+	set {-@pluginname::UnremovableItems::checkNames::%{_size}%} to {_checkName}
+	set {-@pluginname::UnremovableItems::checkLore::%{_size}%} to {_checkLore}
 
 #Checks if an item is removable
 function isUnremovable(i: item) :: boolean:
-	loop {-UnremovableItems::*}:
+	loop {-@pluginname::UnremovableItems::*}:
 		if loop-value is {_i}:
 			return true
-		if {-UnremovableItems::checkNames::%loop-iteration%} is true:
+		if {-@pluginname::UnremovableItems::checkNames::%loop-iteration%} is true:
 			if name of loop-value is name of {_i}:
 				return true
-		if {-UnremovableItems::checkLore::%loop-iteration%} is true:
+		if {-@pluginname::UnremovableItems::checkLore::%loop-iteration%} is true:
 			if lore of loop-value is lore of {_i}:
 				return true
 	return false
 
 on inventory click:
-	if player's open inventory = event-inventory:
+	if player's open inventory is event-inventory:
 		if any:
 			click action is lmb
 			click action is rmb
 		then:
 			if isUnremovable(player's cursor slot) is true:
+				cancel event
+
+on inventory click:
+	if player's open inventory is event-inventory:
+		if click action is number key:
+			if isUnremovable(player.getInventory().getItem(event.getHotbarButton())) is true:
 				cancel event
 
 on inventory drag:
@@ -223,7 +229,7 @@ on inventory drag:
 
 	loop {_list::*}:
 		set {_num} to loop-value parsed as integer
-		if player's open inventory = event.getView().getInventory({_num}):
+		if player's open inventory is event.getView().getInventory({_num}):
 			if isUnremovable(past event-item) is true:
 				cancel event
 
@@ -442,3 +448,23 @@ local function refreshPlayer(player: player):
 	{_serverPlayer}.server.getPlayerList().sendPlayerPermissionLevel({_serverPlayer})
 	{_serverPlayer}.server.getPlayerList().sendLevelInfo({_serverPlayer}, {_serverLevel})
 	{_serverPlayer}.server.getPlayerList().sendAllPlayerInfo({_serverPlayer})
+
+#Geometry
+function oppositeNumber(number: number) :: number:
+	return {_number} * -1
+
+function leftBlocks(location: location, blocks: number) :: location:
+	set {_clone} to {_location}
+	set {_yaw} to {_clone}.getYaw()
+
+	set {_radians} to {_yaw} - 90
+	set {_vec} to vector(oppositeNumber(sin({_radians})), 0, cos({_radians})).normalize().multiply({_blocks})
+	return {_clone}.add({_vec})
+
+function rightBlocks(location: location, blocks: number) :: location:
+	set {_clone} to {_location}
+	set {_yaw} to {_clone}.getYaw()
+
+	set {_radians} to {_yaw} + 90
+	set {_vec} to vector(oppositeNumber(sin({_radians})), 0, cos({_radians})).normalize().multiply({_blocks})
+	return {_clone}.add({_vec})
