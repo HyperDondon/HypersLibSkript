@@ -1,4 +1,4 @@
-#Version HYPER-COMMISSION-USE-V1.3
+#Version HYPER-COMMISSION-USE-V1.3.1
 
 #Requirements
 #Modern Skript, 2.9+ (mostly tested on 2.10)
@@ -55,7 +55,7 @@ import:
 	org.bukkit.entity.Mob
 
 on load:
-	set {-@pluginname::APIChange} to isAtAPIChange()
+	set {-{@pluginname}::APIChange} to isAtAPIChange()
 
 #Checks if version is 1.20.4 or lower. At 1.20.5, Mojang has changed the NBT formatDouble and so has the server APIs. The change to the Bukkit API have been drastic.
 local function isAtAPIChange() :: boolean:
@@ -82,12 +82,12 @@ local function isAtAPIChange() :: boolean:
 
 condition server[(-| )version] is at [bukkit(-| )](API|api) change:
 	check:
-		{-@pluginname::APIChange} is true
+		{-{@pluginname}::APIChange} is true
 		continue
 
 condition server[(-| )version] (is not|isn't) at [bukkit(-| )](API|api) change:
 	check:
-		{-@pluginname::APIChange} is false
+		{-{@pluginname}::APIChange} is false
 		continue
 
 #Returns a random location out of a location within a radius.
@@ -105,29 +105,29 @@ function formatDouble(num: number) :: string:
 
 #Gets the cooldown variable
 function getCooldown(cooldown: text) :: int:
-	return {-@pluginname::Cooldown::%{_cooldown}%}
+	return {-{@pluginname}::Cooldown::%{_cooldown}%}
 
 #Gets the cooldown's seconds, does not return the whole cooldown in seconds.
 function getCooldownSeconds(cooldown: text) :: int:
-	add Duration.ofMillis({-@pluginname::Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toSecondsPart() to {_coo}
+	add Duration.ofMillis({-{@pluginname}::Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toSecondsPart() to {_coo}
 	if {_coo} is 60:
 		set {_coo} to 0
 	return {_coo}
 
 #Gets the cooldown's minutes.
 function getCooldownMinutes(cooldown: text) :: int:
-	set {_coo} to Duration.ofMillis({-@pluginname::Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toMinutes()
-	if Duration.ofMillis({-@pluginname::Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toSecondsPart() is 60:
+	set {_coo} to Duration.ofMillis({-{@pluginname}::Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toMinutes()
+	if Duration.ofMillis({-{@pluginname}::Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toSecondsPart() is 60:
 		add 1 to {_coo}
 	return {_coo}
 	
 #Sets the cooldown. 2nd argument (cooldown to be set) must be in milliseconds. Use toMilliseconds().
 function setCooldown(cooldown: text, value: number):
-	set {-@pluginname::Cooldown::%{_cooldown}%} to System.currentTimeMillis() + {_value}
+	set {-{@pluginname}::Cooldown::%{_cooldown}%} to System.currentTimeMillis() + {_value}
 
 #Checks if a cooldown exists, what else?
 function doesCooldownExist(cooldown: text) :: boolean:
-	if {-@pluginname::Cooldown::%{_cooldown}%} is set:
+	if {-{@pluginname}::Cooldown::%{_cooldown}%} is set:
 		return true
 	else:
 		return false
@@ -186,23 +186,23 @@ function getActionBarCooldown(cooldow: text, show_decimal: boolean = false) :: t
 
 #Makes the item unremovable from your inventory
 function addUnremovableItem(i: item, checkName: boolean = true, checkLore: boolean = true):
-	if {-@pluginname::UnremovableItems::*} is set:
-		set {_size} to size of {-@pluginname::UnremovableItems::*} + 1
+	if {-{@pluginname}::UnremovableItems::*} is set:
+		set {_size} to size of {-{@pluginname}::UnremovableItems::*} + 1
 	else:
 		set {_size} to 1
-	set {-@pluginname::UnremovableItems::%{_size}%} to {_i}
-	set {-@pluginname::UnremovableItems::checkNames::%{_size}%} to {_checkName}
-	set {-@pluginname::UnremovableItems::checkLore::%{_size}%} to {_checkLore}
+	set {-{@pluginname}::UnremovableItems::%{_size}%} to {_i}
+	set {-{@pluginname}::UnremovableItems::checkNames::%{_size}%} to {_checkName}
+	set {-{@pluginname}::UnremovableItems::checkLore::%{_size}%} to {_checkLore}
 
 #Checks if an item is removable (duh)
 function isUnremovable(i: item) :: boolean:
-	loop {-@pluginname::UnremovableItems::*}:
+	loop {-{@pluginname}::UnremovableItems::*}:
 		if loop-value is {_i}:
 			return true
-		if {-@pluginname::UnremovableItems::checkNames::%loop-iteration%} is true:
+		if {-{@pluginname}::UnremovableItems::checkNames::%loop-iteration%} is true:
 			if name of loop-value is name of {_i}:
 				return true
-		if {-@pluginname::UnremovableItems::checkLore::%loop-iteration%} is true:
+		if {-{@pluginname}::UnremovableItems::checkLore::%loop-iteration%} is true:
 			if lore of loop-value is lore of {_i}:
 				return true
 	return false
