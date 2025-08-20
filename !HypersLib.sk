@@ -1,4 +1,4 @@
-#Version HYPER-COMMISSION-USE-V1.3.2
+#Version HYPER-COMMISSION-USE-V1.3.3
 
 #Requirements
 #Modern Skript, 2.9+ (mostly tested on 2.10)
@@ -510,6 +510,23 @@ condition %itemstack% (positive: has|negative: (doesn't|does not) have) [string]
 				continue
 			else:
 				expr-1 doesn't have string tag data expr-2
+				continue
+
+condition %itemstack% (positive: has|negative: (doesn't|does not) have) (int[eger]|number) [custom] [nbt[ tag]] data %string% [(as|[set] to) %-int%]:
+	check:
+		if "%parse tags%" contains "positive": 
+			if expr-3 is set:
+				expr-1 has int tag data expr-2 set to expr-3
+				continue
+			else:
+				expr-1 has int tag data expr-2
+				continue
+		else:
+			if expr-3 is set:
+				expr-1 doesn't have int tag data expr-2 set to expr-3
+				continue
+			else:
+				expr-1 doesn't have int tag data expr-2
 				continue
 
 condition %itemstack% (positive: has|negative: (doesn't|does not) have) %nbttype% [custom] [nbt[ tag]] data %string% [(as|[set] to) %-object%]:
