@@ -1,4 +1,4 @@
-#Version HYPER-COMMISSION-USE-V1.3.3
+#Version HYPER-COMMISSION-USE-V1.4
 
 #Requirements
 #Modern Skript, 2.9+ (mostly tested on 2.10)
@@ -568,3 +568,39 @@ expression %itemtype% with (int[eger]|number) [custom] [nbt[ tag]] data %string%
 	return type: item
 	get:
 		return expr-1 with int tag data expr-2 set to expr-3
+
+
+#Our own boss bar syntax, uses SkBee's boss bar system
+expression [new] boss[ ]bar [(named|(with|of) id) %-string%] [(with title|titled) %-string%] [[with (color|colour)|colo[u]red] %-color%] [(with style|styled) %-bossbarstyle%] [with progress %-number%] [lasting [for] %-timespan%] [updating every %-timespan%] [counting (:(up|down))] for %players%:
+	return type: bossbar
+	get:
+		set {_id} to expr-1 ? "%uuid of {_player}%:%random uuid%"
+		set {_title} to expr-2 ? "Bossbar"
+		set {_color} to expr-3 ? red
+		set {_style} to expr-4 ? solid_bar
+		set {_progress} to expr-5 ? 100
+		set {_lasting} to expr-6
+		set {_updating} to expr-7 ? 1 tick
+		set {_counting} to the first element of parse tags ? "down" #defaults to counting down
+		set {_players::*} to expr-8
+		
+		#for knowing the ids, refer to this. make sure to set an id to change progress youself.
+		set {_bar} to boss bar with id "%{_id}%" with title {_title} with color {_color} with style {_style} with progress {_progress}
+
+		add {_players::*} to bar players of {_bar}
+		if {_lasting} is set:
+			updateActionBar({_bar}, {_updating}, {_lasting}, {_counting}, {_id})
+		return {_bar}
+
+function updateActionBar(bar: bossbar, updating: timespan, lasting: timespan, counting: text, id: text):
+	#convert to milliseconds
+	set {_time} to ((ticks of {_lasting}) / 20) + unix timestamp of now
+	set {_change} to 100 * ((ticks of {_updating}) / (ticks of {_lasting}))
+	while {_time} > unix timestamp of now:
+		if {_counting} is "up":
+			add {_change} to bar progress of {_bar}
+		else if {_counting} is "down":
+			remove {_change} from bar progress of {_bar}
+		wait {_updating}
+	remove bar players of {_bar} from bar players of {_bar}
+	delete boss bar with id {_id}
