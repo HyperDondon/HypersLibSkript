@@ -1,4 +1,4 @@
-#Version HYPER-COMMISSION-USE-V1.4
+#Version HYPER-COMMISSION-USE-V1.4.1
 
 #Requirements
 #Modern Skript, 2.9+ (mostly tested on 2.10)
@@ -601,6 +601,8 @@ function updateActionBar(bar: bossbar, updating: timespan, lasting: timespan, co
 			add {_change} to bar progress of {_bar}
 		else if {_counting} is "down":
 			remove {_change} from bar progress of {_bar}
+		if bar players of {_bar} is not set:
+			exit 2 sections
 		wait {_updating}
 	remove bar players of {_bar} from bar players of {_bar}
 	delete boss bar with id {_id}
