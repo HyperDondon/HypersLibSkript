@@ -1,4 +1,4 @@
-#Version HYPER-COMMISSION-USE-V1.4.1
+#Version HYPER-COMMISSION-USE-V1.5
 
 #Requirements
 #Modern Skript, 2.9+ (mostly tested on 2.10)
@@ -102,6 +102,37 @@ function formatDouble(num: number) :: string:
 		return "%{_num}%.0"
 	else:
 		return "%{_num}%"
+
+
+expression cooldown %string% [for %player%]:
+	get:
+		if expr-2 is set:
+			set {_id} to "%uuid of expr-2%:%expr-1%"
+		else:
+			set {_id} to expr-1
+		return getActionBarCooldown({_id})
+	set:
+		if expr-2 is set:
+			set {_id} to "%uuid of expr-2%:%expr-1%"
+		else:
+			set {_id} to expr-1
+		setCooldown({_id}, ticks of (change value * 50))
+
+condition cooldown %string% [for %player%] (positive:is ready|negative:is(n't| not) ready):
+	check:
+		if expr-2 is set:
+			set {_id} to "%uuid of expr-2%:%expr-1%"
+		else:
+			set {_id} to expr-1
+		if first element of parser tags is "positive":
+			isCooldownReady({_id}) is true
+			continue
+		else:
+			if isCooldownReady({_id}) is not true:
+				continue
+
+
+#This is old, this is for compatibility purposes.
 
 #Gets the cooldown variable
 function getCooldown(cooldown: text) :: int:
