@@ -1,4 +1,4 @@
-#Version HYPER-COMMISSION-USE-V1.5
+#Version HYPER-COMMISSION-USE-V1.5.1
 
 #Requirements
 #Modern Skript, 2.9+ (mostly tested on 2.10)
@@ -356,6 +356,7 @@ local function toSmallCaps(s: text) :: text:
 	
 expression:
 	patterns:
+		%strings% in small caps
 		small caps from %strings%
 		%strings% (as|to) small caps
 	get:
