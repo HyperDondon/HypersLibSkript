@@ -1,4 +1,4 @@
-#Version HYPER-COMMISSION-USE-V1.5.1
+#Version HYPER-COMMISSION-USE-V1.5.2
 
 #Requirements
 #Modern Skript, 2.9+ (mostly tested on 2.10)
@@ -225,8 +225,15 @@ function addUnremovableItem(i: item, checkName: boolean = true, checkLore: boole
 	set {-{@pluginname}::UnremovableItems::checkNames::%{_size}%} to {_checkName}
 	set {-{@pluginname}::UnremovableItems::checkLore::%{_size}%} to {_checkLore}
 
+expression unremovable %itemtype%:
+	return type: item
+	get:
+		return expr-1 with boolean tag data "unremovable" set to true
+
 #Checks if an item is removable (duh)
 function isUnremovable(i: item) :: boolean:
+	if {_i} has boolean tag data "unremovable":
+		return true
 	loop {-{@pluginname}::UnremovableItems::*}:
 		if loop-value is {_i}:
 			return true
@@ -356,9 +363,8 @@ local function toSmallCaps(s: text) :: text:
 	
 expression:
 	patterns:
-		%strings% in small caps
 		small caps from %strings%
-		%strings% (as|to) small caps
+		%strings% (as|to|in) small caps
 	get:
 		set {_strings::*} to expr-1
 		loop {_strings::*}:
@@ -600,7 +606,6 @@ expression %itemtype% with (int[eger]|number) [custom] [nbt[ tag]] data %string%
 	return type: item
 	get:
 		return expr-1 with int tag data expr-2 set to expr-3
-
 
 #Our own boss bar syntax, uses SkBee's boss bar system
 expression [new] boss[ ]bar [(named|(with|of) id) %-string%] [(with title|titled) %-string%] [[with (color|colour)|colo[u]red] %-color%] [(with style|styled) %-bossbarstyle%] [with progress %-number%] [lasting [for] %-timespan%] [updating every %-timespan%] [counting (:(up|down))] for %players%:
