@@ -1,4 +1,4 @@
-#Version HYPER-COMMISSION-USE-V1.5.2
+#Version HYPER-COMMISSION-USE-V1.5.3
 
 #Requirements
 #Modern Skript, 2.9+ (mostly tested on 2.10)
@@ -33,6 +33,7 @@ import:
 	org.bukkit.persistence.PersistentDataHolder
 	org.bukkit.persistence.PersistentDataContainer
 	org.bukkit.persistence.PersistentDataType
+	org.bukkit.event.block.Action
 
 	#NMS. We are using Mojang mappings, so, PaperMC is required.
 	#Entities
@@ -303,7 +304,6 @@ on inventory click:
 	cancel event
 
 on PlayerInteractEntityEvent:
-	event.getRightClicked() is an item frame
 	if event.getHand() is EquipmentSlot.HAND:
 		isUnremovable(event.getPlayer()'s held item) is true
 		event.setCancelled(true)
@@ -313,7 +313,8 @@ on PlayerInteractEntityEvent:
 		event.setCancelled(true)
 
 on PlayerInteractEvent:
-	event.getClickedBlock() is a decorated pot
+	if event.getAction() is not Action.RIGHT_CLICK_BLOCK:
+		stop
 	if event.getHand() is EquipmentSlot.HAND:
 		isUnremovable(event.getPlayer()'s held item) is true
 		event.setCancelled(true)
@@ -413,7 +414,10 @@ local function setVision(player: player, entity: object):
 		set {_NMSEntity} to new Creeper(EntityType.CREEPER, {_serverLevel})
 	else if "%{_entity}%" is "spider":
 		set {_NMSEntity} to new Spider(EntityType.SPIDER, {_serverLevel})
-	else if "%{_entity}%" is "cave_spider":
+	else if any:
+		"%{_entity}%" is "cave_spider"
+		"%{_entity}%" is "cave spider"
+	then:
 		set {_NMSEntity} to new CaveSpider(EntityType.CAVE_SPIDER, {_serverLevel})
 	else if "%{_entity}%" is "player":
 		{_serverPlayer}.connection.send(new ClientboundSetCameraPacket({_serverPlayer}))
