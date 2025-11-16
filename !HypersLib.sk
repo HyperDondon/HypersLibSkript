@@ -1,4 +1,4 @@
-#Version HYPER-COMMISSION-USE-V1.5.3
+#Version HYPER-COMMISSION-USE-V1.5.4
 
 #Requirements
 #Modern Skript, 2.9+ (mostly tested on 2.10)
@@ -328,31 +328,39 @@ local function toSmallCaps(s: text) :: text:
 	set {_smallText::*} to "ᴀ", "ʙ", "ᴄ", "ᴅ", "ᴇ", "ғ", "ɢ", "ʜ", "ɪ", "ᴊ", "ᴋ", "ʟ", "ᴍ", "ɴ", "ᴏ", "ᴘ", "ǫ", "ʀ", "s", "ᴛ", "ᴜ", "ᴠ", "ᴡ", "x", "ʏ" and "ᴢ"
 	set {_newString} to ""
 	set {_skip} to false
+	set {_skipAmount} to 0
 	set {_s} to raw {_s}
 	loop {_s}'s length times:
-		set {_value} to (loop-iteration-1) - 1
+		set {_value} to loop-iteration - 1
 		set {_skip} to false
 		set {_set} to char at {_value} in {_s}
+		if {_skipAmount} > 0:
+			add {_set} to {_newString}
+			remove 1 from {_skipAmount}
+			continue
+		if {_skipAmpersand} is set:
+			{_set} is "&"
+			add {_set} to {_newString}
+			continue
+		if {_set} is not "&":
+			delete {_skipAmpersand}
 		loop {_normalText::*}:
 			if {_skip} is true:
 				continue
-			if {_noColor} isn't true:
-				if {_set} is "&":
-					if char at {_value} + 1 in {_s} is "&":
-						set {_noColor} to true
-						exit 4 sections
-					add {_set} to {_newString}
-					set {_skip} to true
-					set {_nextSkipAdd} to true
-					continue
-				if {_nextSkipAdd} is true:
-					{_noColor} isn't true
-					add {_set} to {_newString}
-					set {_skip} to true
-					delete {_nextSkipAdd}
-					continue
-			else:
-				delete {_noColor}
+			if {_set} is "<":
+				set {_index} to {_value}
+				while char at {_index} in {_s} is not ">":
+					if {_index} > {_s}'s length - 1:
+						exit 3 sections
+					add 1 to {_index}
+					add 1 to {_skipAmount}
+			if {_set} is "&":
+				if all:
+					{_s}'s length - 1 > {_value}
+					char at {_value} + 1 in {_s} is not "&"
+				then:
+					set {_skipAmpersand} to true
+					add 1 to {_skipAmount}
 			if Character.isLetter({_set}.toUpperCase()) is not true:
 				add {_set} to {_newString}
 				set {_skip} to true
