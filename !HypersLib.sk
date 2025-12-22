@@ -1,4 +1,4 @@
-#Version HYPER-COMMISSION-USE-V1.5.5
+#Version HYPER-COMMISSION-USE-V1.5.6
 
 #Requirements
 #Modern Skript, 2.9+ (mostly tested on 2.10)
@@ -61,10 +61,6 @@ on load:
 #Checks if version is 1.20.4 or lower. At 1.20.5, Mojang has changed the NBT formatDouble and so has the server APIs. The change to the Bukkit API have been drastic.
 local function isAtAPIChange() :: boolean:
 	if any:
-		Bukkit.getBukkitVersion() contains "1.8"
-		Bukkit.getBukkitVersion() contains "1.9"
-		Bukkit.getBukkitVersion() contains "1.10"
-		Bukkit.getBukkitVersion() contains "1.11"
 		Bukkit.getBukkitVersion() contains "1.12"
 		Bukkit.getBukkitVersion() contains "1.13"
 		Bukkit.getBukkitVersion() contains "1.14"
