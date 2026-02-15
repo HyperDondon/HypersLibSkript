@@ -1,0 +1,208 @@
+#HypersLib Tester
+#A comprehensive test suite for HypersLib.sk functionality
+
+#Requires: HypersLib.sk to be loaded before this file
+
+options:
+	prefix: &b[HypersLib Tester]&f
+
+#====================
+# TEST FUNCTIONS
+#====================
+
+function testCooldowns(player: player) :: boolean:
+	send "{@prefix} &f[&e...&f] Testing cooldown system" to {_player}
+	set cooldown "test:ability" for {_player} to 5 seconds
+	if cooldown "test:ability" for {_player} is ready:
+		send "{@prefix} &f[&cFAIL&f] Cooldown system" to {_player}
+		return false
+	send "{@prefix} &f[&aPASS&f] Cooldown system" to {_player}
+	return true
+
+function testUnremovableItems(player: player) :: boolean:
+	send "{@prefix} &f[&e...&f] Testing unremovable items" to {_player}
+	set {_sword} to an unremovable diamond sword
+	give {_sword} to {_player}
+	if {_player} doesn't have diamond sword:
+		send "{@prefix} &f[&cFAIL&f] Unremovable items" to {_player}
+		return false
+	send "{@prefix} &f[&aPASS&f] Unremovable items" to {_player}
+	return true
+
+function testSmallCaps(player: player) :: boolean:
+	send "{@prefix} &f[&e...&f] Testing small caps formatting" to {_player}
+	set {_text1} to small caps from "Hello"
+	set {_text2} to "World" as small caps
+	set {_text3} to "Test" in small caps
+	if any:
+		{_text1} is ""
+		{_text2} is ""
+		{_text3} is ""
+	then:
+		send "{@prefix} &f[&cFAIL&f] Small caps formatting" to {_player}
+		return false
+	send "{@prefix} &f[&aPASS&f] Small caps formatting" to {_player}
+	return true
+
+function testBedrockDetection(player: player) :: boolean:
+	send "{@prefix} &f[&e...&f] Testing Bedrock player detection" to {_player}
+	if {_player} is a bedrock player:
+		set {_bedrock} to true
+	else:
+		set {_bedrock} to false
+	
+	if {_player} is not a geyser player:
+		set {_notgeyser} to true
+	else:
+		set {_notgeyser} to false
+	
+	send "{@prefix} &f[&aPASS&f] Bedrock player detection" to {_player}
+	return true
+
+function testVisionChange(player: player) :: boolean:
+	send "{@prefix} &f[&e...&f] Testing vision change" to {_player}
+	change vision of {_player} to enderman
+	change vision of {_player} to player
+	send "{@prefix} &f[&aPASS&f] Vision change" to {_player}
+	return true
+
+function testPlayerRefresh(player: player) :: boolean:
+	send "{@prefix} &f[&e...&f] Testing player refresh" to {_player}
+	refresh {_player}
+	send "{@prefix} &f[&aPASS&f] Player refresh" to {_player}
+	return true
+
+function testBossBar(player: player) :: boolean:
+	send "{@prefix} &f[&e...&f] Testing boss bar creation" to {_player}
+	set {_bar} to new boss bar with title "&bTest Bar" colored red styled solid_bar with progress 100 for {_player}
+	if {_bar} is not set:
+		send "{@prefix} &f[&cFAIL&f] Boss bar creation" to {_player}
+		return false
+	send "{@prefix} &f[&aPASS&f] Boss bar creation" to {_player}
+	return true
+
+function testNBTTags(player: player) :: boolean:
+	send "{@prefix} &f[&e...&f] Testing NBT tag system" to {_player}
+	set {_item1} to a diamond with string tag nbt data "test_string" set to "value"
+	set {_item2} to a golden apple with boolean tag nbt data "test_bool" set to true
+	set {_item3} to a stick with int tag nbt data "test_int" set to 42
+	
+	if {_item1} doesn't have string tag nbt data "test_string":
+		send "{@prefix} &f[&cFAIL&f] NBT tag system" to {_player}
+		return false
+	if {_item2} doesn't have boolean tag nbt data "test_bool":
+		send "{@prefix} &f[&cFAIL&f] NBT tag system" to {_player}
+		return false
+	if {_item3} doesn't have int tag nbt data "test_int":
+		send "{@prefix} &f[&cFAIL&f] NBT tag system" to {_player}
+		return false
+	
+	give {_item1} to {_player}
+	give {_item2} to {_player}
+	give {_item3} to {_player}
+	
+	send "{@prefix} &f[&aPASS&f] NBT tag system" to {_player}
+	return true
+
+function testStringManipulation(player: player) :: boolean:
+	send "{@prefix} &f[&e...&f] Testing string manipulation" to {_player}
+	set {_string} to "HypersLib"
+	set {_char1} to character at index 0 within {_string}
+	set {_char2} to character at index 4 within {_string}
+	
+	if any:
+		{_char1} is not "H"
+		{_char2} is not "r"
+	then:
+		send "{@prefix} &f[&cFAIL&f] String manipulation" to {_player}
+		return false
+	
+	send "{@prefix} &f[&aPASS&f] String manipulation" to {_player}
+	return true
+
+function testVersionCheck(player: player) :: boolean:
+	send "{@prefix} &f[&e...&f] Testing version check" to {_player}
+	if server version is at api change:
+		set {_version} to "1.20.5+"
+	else:
+		set {_version} to "1.20.4 or lower"
+	send "{@prefix} &f[&aPASS&f] Version check (Server: {_version})" to {_player}
+	return true
+
+#====================
+# MAIN TESTER FUNCTION
+#====================
+
+function runHypersLibTests(player: player):
+	send "" to {_player}
+	send "&b========== &fHypersLib Test Suite &b==========" to {_player}
+	send "" to {_player}
+	
+	set {_pass} to 0
+	set {_fail} to 0
+	
+	if testCooldowns({_player}) is true:
+		add 1 to {_pass}
+	else:
+		add 1 to {_fail}
+	
+	if testUnremovableItems({_player}) is true:
+		add 1 to {_pass}
+	else:
+		add 1 to {_fail}
+	
+	if testSmallCaps({_player}) is true:
+		add 1 to {_pass}
+	else:
+		add 1 to {_fail}
+	
+	if testBedrockDetection({_player}) is true:
+		add 1 to {_pass}
+	else:
+		add 1 to {_fail}
+	
+	if testVisionChange({_player}) is true:
+		add 1 to {_pass}
+	else:
+		add 1 to {_fail}
+	
+	if testPlayerRefresh({_player}) is true:
+		add 1 to {_pass}
+	else:
+		add 1 to {_fail}
+	
+	if testBossBar({_player}) is true:
+		add 1 to {_pass}
+	else:
+		add 1 to {_fail}
+	
+	if testNBTTags({_player}) is true:
+		add 1 to {_pass}
+	else:
+		add 1 to {_fail}
+	
+	if testStringManipulation({_player}) is true:
+		add 1 to {_pass}
+	else:
+		add 1 to {_fail}
+	
+	if testVersionCheck({_player}) is true:
+		add 1 to {_pass}
+	else:
+		add 1 to {_fail}
+	
+	send "" to {_player}
+	send "&b========== &fResults &b==========" to {_player}
+	send "&a✓ Passed: &f%{_pass}%" to {_player}
+	send "&c✗ Failed: &f%{_fail}%" to {_player}
+	send "&bTotal: &f%{_pass} + {_fail}%" to {_player}
+	send "&b=====" to {_player}
+	send "" to {_player}
+
+#====================
+# MAIN COMMAND
+#====================
+
+command hyperlibtest:
+	trigger:
+		runHypersLibTests(player)

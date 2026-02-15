@@ -1,11 +1,12 @@
-#Version HYPER-COMMISSION-USE-V1.5.6
+#Version V2.0.0
 
 #Requirements
-#Modern Skript, 2.9+ (mostly tested on 2.10)
+#Modern Skript, 2.9+ (mostly tested on 2.11.2 and 2.13.2)
 #Skript-Reflect
 #SkBee
-#SkQuery
 #PaperMC or derivatives for NMS based things
+
+# Player vision changing doesn't work with 1.21.9+ clients. The bug was patched :(
 
 #Change this to your plugin/script's name
 #If you change this after storing data with tags, they will no longer work
@@ -13,7 +14,6 @@ options:
 	pluginname: hyperslib
 
 #Reminds the user to enable memory variables once they restart the server with the library for the first time and then later.
- 
 on skript start:
 	if {-Memory_variable} is set:
 		send "&ePlease enable memory variables for much better performance and near 0 lag, they are easy to enable." to console
@@ -40,8 +40,7 @@ import:
 	net.minecraft.world.entity.EntityType
 	net.minecraft.world.entity.monster.EnderMan
 	net.minecraft.world.entity.monster.Creeper
-	net.minecraft.world.entity.monster.CaveSpider
-	net.minecraft.world.entity.monster.Spider
+
 	#Packets
 	net.minecraft.network.protocol.game.ClientboundAddEntityPacket
 	net.minecraft.network.protocol.game.ClientboundSetCameraPacket
@@ -54,9 +53,24 @@ import:
 	net.minecraft.world.phys.AABB
 	#Not NMS, used for NMS parts
 	org.bukkit.entity.Mob
+	java.lang.Class
 
 on load:
 	set {-{@pluginname}::APIChange} to isAtAPIChange()
+	if isAt1i21i11() is true:
+		set {-{@pluginname}::SpiderClass} to class "net.minecraft.world.entity.monster.spider.Spider"
+		set {-{@pluginname}::CaveSpiderClass} to class "net.minecraft.world.entity.monster.spider.CaveSpider"
+	else:
+		set {-{@pluginname}::SpiderClass} to class "net.minecraft.world.entity.monster.Spider"
+		set {-{@pluginname}::CaveSpiderClass} to class "net.minecraft.world.entity.monster.CaveSpider"
+
+
+#Changes number without a decimal number to have one.
+function formatDouble(num: number) :: string:
+	if mod({_num}, 1) is 0:
+		return "%{_num}%.0"
+	else:
+		return "%{_num}%"
 
 #Checks if version is 1.20.4 or lower. At 1.20.5, Mojang has changed the NBT formatDouble and so has the server APIs. The change to the Bukkit API have been drastic.
 local function isAtAPIChange() :: boolean:
@@ -77,28 +91,23 @@ local function isAtAPIChange() :: boolean:
 		return false
 	return true
 
-condition server[(-| )version] is at [bukkit(-| )](API|api) change:
+condition server[(-| )version] is[(negative:( not|n't))] at [bukkit(-| )](API|api) change:
 	check:
-		{-{@pluginname}::APIChange} is true
-		continue
+		if first element of parser tags is "negative":
+			{-{@pluginname}::APIChange} is false
+			continue
+		else:
+			{-{@pluginname}::APIChange} is true
+			continue
 
-condition server[(-| )version] (is not|isn't) at [bukkit(-| )](API|api) change:
-	check:
-		{-{@pluginname}::APIChange} is false
-		continue
 
-#Returns a random location out of a location within a radius.
-function getRTP(loc: location, radius: int) :: location:
-	set {_x} to x coord of {_loc} + (random integer between ({_radius}-{_radius}-{_radius}) and {_radius})
-	set {_z} to z coord of {_loc} + (random integer between ({_radius}-{_radius}-{_radius}) and {_radius})
-	return location of highest block at location at ({_x}, 0, {_z}) in world of {_loc}
-
-#Changes number without a decimal number to have one.
-function formatDouble(num: number) :: string:
-	if mod({_num}, 1) is 0:
-		return "%{_num}%.0"
+local function isAt1i21i11() :: boolean:
+	set {_newSpiderClass} to class "net.minecraft.world.entity.monster.spider.Spider"
+	if {_newSpiderClass} is set:
+		return true
 	else:
-		return "%{_num}%"
+		return false
+
 
 expression cooldown %string% [for %player%]:
 	get:
@@ -112,74 +121,47 @@ expression cooldown %string% [for %player%]:
 			set {_id} to "%uuid of expr-2%:%expr-1%"
 		else:
 			set {_id} to expr-1
-		setCooldown({_id}, ticks of (change value * 50))
 
-condition cooldown %string% [for %player%] (positive:is ready|negative:is(n't| not) ready):
+		set {-{@pluginname}::Cooldown::%{_id}%} to System.currentTimeMillis() + ticks of (change value * 50)
+
+condition cooldown %string% [for %player%] is[(negative:( not|n't))] ready:
 	check:
 		if expr-2 is set:
 			set {_id} to "%uuid of expr-2%:%expr-1%"
 		else:
 			set {_id} to expr-1
-		if first element of parser tags is "positive":
-			isCooldownReady({_id}) is true
+		if first element of parser tags is "negative":
+			isCooldownReady({_id}) is not true
 			continue
 		else:
-			if isCooldownReady({_id}) is not true:
-				continue
-
-
-#This is old, this is for compatibility purposes.
-
-#Gets the cooldown variable
-function getCooldown(cooldown: text) :: int:
-	return {-{@pluginname}::Cooldown::%{_cooldown}%}
+			isCooldownReady({_id}) is true
+			continue
 
 #Gets the cooldown's seconds, does not return the whole cooldown in seconds.
-function getCooldownSeconds(cooldown: text) :: int:
+local function getCooldownSeconds(cooldown: text) :: int:
 	add Duration.ofMillis({-{@pluginname}::Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toSecondsPart() to {_coo}
 	if {_coo} is 60:
 		set {_coo} to 0
 	return {_coo}
 
 #Gets the cooldown's minutes.
-function getCooldownMinutes(cooldown: text) :: int:
+local function getCooldownMinutes(cooldown: text) :: int:
 	set {_coo} to Duration.ofMillis({-{@pluginname}::Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toMinutes()
 	if Duration.ofMillis({-{@pluginname}::Cooldown::%{_cooldown}%} - System.currentTimeMillis()).toSecondsPart() is 60:
 		add 1 to {_coo}
 	return {_coo}
-	
-#Sets the cooldown. 2nd argument (cooldown to be set) must be in milliseconds. Use toMilliseconds().
-function setCooldown(cooldown: text, value: number):
-	set {-{@pluginname}::Cooldown::%{_cooldown}%} to System.currentTimeMillis() + {_value}
-
-#Checks if a cooldown exists, what else?
-function doesCooldownExist(cooldown: text) :: boolean:
-	if {-{@pluginname}::Cooldown::%{_cooldown}%} is set:
-		return true
-	else:
-		return false
 
 #Checks if a cooldown is ready to use
-function isCooldownReady(cooldown: text) :: boolean:
-	if doesCooldownExist({_cooldown}) is false:
+local function isCooldownReady(cooldown: text) :: boolean:
+	if {-{@pluginname}::Cooldown::%{_cooldown}%} is set:
 		return true
-	if getCooldown({_cooldown}) - System.currentTimeMillis() <= 1000:
+	if {-{@pluginname}::Cooldown::%{_cooldown}%} - System.currentTimeMillis() <= 1000:
 		return true
 	else:
 		return false
-
-#Returns your value as in millseconds, used for cooldowns.
-function toMilliseconds(minutes: int, seconds: int) :: int:
-	set {_final} to 0
-	loop {_minutes} times:
-		add 60000 to {_final}
-	loop {_seconds} times:
-		add 1000 to {_final}
-
-	return {_final}
 	
 #Returns cooldown in how it would look like in an action bar.
-function getActionBarCooldown(cooldow: text, show_decimal: boolean = false) :: text:
+local function getActionBarCooldown(cooldow: text, show_decimal: boolean = false) :: text:
 	if isCooldownReady({_cooldow}) is true:
 		set {_cooldown} to "&aReady!"
 	else:
@@ -211,34 +193,16 @@ function getActionBarCooldown(cooldow: text, show_decimal: boolean = false) :: t
 	
 	return {_cooldown}
 
-#Makes the item unremovable from your inventory
-function addUnremovableItem(i: item, checkName: boolean = true, checkLore: boolean = true):
-	if {-{@pluginname}::UnremovableItems::*} is set:
-		set {_size} to size of {-{@pluginname}::UnremovableItems::*} + 1
-	else:
-		set {_size} to 1
-	set {-{@pluginname}::UnremovableItems::%{_size}%} to {_i}
-	set {-{@pluginname}::UnremovableItems::checkNames::%{_size}%} to {_checkName}
-	set {-{@pluginname}::UnremovableItems::checkLore::%{_size}%} to {_checkLore}
-
-expression unremovable %itemtype%:
+expression [(a|an)] unremovable %itemtype%:
 	return type: item
 	get:
 		return expr-1 with boolean tag data "unremovable" set to true
 
 #Checks if an item is removable (duh)
-function isUnremovable(i: item) :: boolean:
-	if {_i} has boolean tag data "unremovable":
+local function isUnremovable(item: item) :: boolean:
+	#%itemstack% (positive: has|negative: (doesn't|does not) have) [%-nbttype%] [custom] [nbt] data %string% [(as|[set] to) %-object%]
+	{_item} has boolean tag data "unremovable":
 		return true
-	loop {-{@pluginname}::UnremovableItems::*}:
-		if loop-value is {_i}:
-			return true
-		if {-{@pluginname}::UnremovableItems::checkNames::%loop-iteration%} is true:
-			if name of loop-value is name of {_i}:
-				return true
-		if {-{@pluginname}::UnremovableItems::checkLore::%loop-iteration%} is true:
-			if lore of loop-value is lore of {_i}:
-				return true
 	return false
 
 on inventory click:
@@ -318,6 +282,26 @@ on PlayerInteractEvent:
 		isUnremovable(event.getPlayer()'s off hand item) is true
 		event.setCancelled(true)
 
+
+#SkQuery port
+expression char[acter][s] at [index] %numbers% (within|in) %string%:
+	return type: string
+	get:
+		set {_finalString} to ""
+
+		set {_indexes::*} to expr-1
+		set {_strings::*} to expr-2
+
+		loop {_indexes::*}:
+			loop {_strings::*}:
+				add loop-value-2.charAt(loop-value-1) to {_characters::*}
+		
+		loop {_characters::*}:
+			loop-value is set
+			set {_finalString} to "%{_finalString}%%loop-value%"
+
+		return {_finalString}
+
 local function toSmallCaps(string: text) :: text:
 	set {_normalText::*} to "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y" and "Z" #!RAT was here, Added a Y, you dumbass hyper.
 	set {_smallText::*} to "ᴀ", "ʙ", "ᴄ", "ᴅ", "ᴇ", "ғ", "ɢ", "ʜ", "ɪ", "ᴊ", "ᴋ", "ʟ", "ᴍ", "ɴ", "ᴏ", "ᴘ", "ǫ", "ʀ", "s", "ᴛ", "ᴜ", "ᴠ", "ᴡ", "x", "ʏ" and "ᴢ"
@@ -366,14 +350,14 @@ expression:
 
 #All geyser/bedrock players have a uuid that start with 00000000-0000-0000-000
 #No Java player would be able to get this uuid, it's not a valid UUID that could be generated from Mojang.
-condition %player% is [a] (bedrock|geyser|floodgate) player:
+condition %player% is[(negative:( not|n't))] [a] (bedrock|geyser|floodgate) player:
 	check:
-		expr-1's uuid starts with "00000000"
-		continue
-condition %player% (is not|isn't) [a] (bedrock|geyser|floodgate) player:
-	check:
-		expr-1's uuid doesn't start with "00000000"
-		continue
+		if first element of parser tags is "negative":
+			expr-1's uuid doesn't start with "00000000"
+			continue
+		else:
+			expr-1's uuid starts with "00000000"
+			continue
 
 #We are using NMS here. Code from PoaSK.
 #Only supports enderman, creeper, spider, cave spider, and player (default for players, duh)
@@ -405,12 +389,12 @@ local function setVision(player: player, entity: object):
 	else if "%{_entity}%" is "creeper":
 		set {_NMSEntity} to new Creeper(EntityType.CREEPER, {_serverLevel})
 	else if "%{_entity}%" is "spider":
-		set {_NMSEntity} to new Spider(EntityType.SPIDER, {_serverLevel})
+		set {_NMSEntity} to new {-{@pluginname}::SpiderClass}(EntityType.SPIDER, {_serverLevel}) # Ignore error, done to add compatibility with newer versions
 	else if any:
 		"%{_entity}%" is "cave_spider"
 		"%{_entity}%" is "cave spider"
 	then:
-		set {_NMSEntity} to new CaveSpider(EntityType.CAVE_SPIDER, {_serverLevel})
+		set {_NMSEntity} to new {-{@pluginname}::CaveSpiderClass}(EntityType.CAVE_SPIDER, {_serverLevel}) # Ignore error, done to add compatibility with newer versions
 	else if "%{_entity}%" is "player":
 		{_serverPlayer}.connection.send(new ClientboundSetCameraPacket({_serverPlayer}))
 		stop
@@ -431,7 +415,13 @@ local function refreshPlayer(player: player):
 	set {_serverLevel} to {_player}.getWorld().getHandle()
 
 	{_serverPlayer}.connection.send(new ClientboundRespawnPacket({_serverPlayer}.createCommonSpawnInfo({_serverLevel}), ClientboundRespawnPacket.KEEP_ALL_DATA))
-	{_serverPlayer}.connection.teleport({_player}.getLocation())
+	set {_loc} to location of {_player}
+	set {_x} to x coord of {_loc}
+	set {_y} to y coord of {_loc}
+	set {_z} to z coord of {_loc}
+	set {_yaw} to yaw of {_loc}
+	set {_pitch} to pitch of {_loc}
+	{_serverPlayer}.connection.teleport({_x}, {_y}, {_z}, {_yaw}, {_pitch})
 
 	if ({_serverPlayer}.isPassenger()):
 		{_serverPlayer}.connection.send(new ClientboundSetPassengersPacket({_serverPlayer}.getVehicle()))
@@ -460,161 +450,22 @@ local function refreshPlayer(player: player):
 	{_serverPlayer}.server.getPlayerList().sendLevelInfo({_serverPlayer}, {_serverLevel})
 	{_serverPlayer}.server.getPlayerList().sendAllPlayerInfo({_serverPlayer})
 
-#Geometry
-function oppositeNumber(number: number) :: number:
-	return {_number} * -1
-
-function leftBlocks(location: location, blocks: number) :: location:
-	set {_clone} to {_location}
-	set {_yaw} to {_clone}.getYaw()
-
-	set {_radians} to {_yaw} - 90
-	set {_vec} to vector(oppositeNumber(sin({_radians})), 0, cos({_radians})).normalize().multiply({_blocks})
-	return {_clone}.add({_vec})
-
-function rightBlocks(location: location, blocks: number) :: location:
-	set {_clone} to {_location}
-	set {_yaw} to {_clone}.getYaw()
-
-	set {_radians} to {_yaw} + 90
-	set {_vec} to vector(oppositeNumber(sin({_radians})), 0, cos({_radians})).normalize().multiply({_blocks})
-	return {_clone}.add({_vec})
-
-item property %string% [string] [custom] [nbt[ tag]] data:
-	return type: string
-	get:
-		return expr-1's expr-2 string tag
-
-item property %string% (int[eger]|number) [custom] [nbt[ tag]] data:
-	return type: integer
-	get:
-		return expr-1's expr-2 int tag
-
-item property %string% %nbttype% [custom] [nbt[ tag]] [data]:
-	get:
-		set {_data} to expr-2
-
-		if server is not at api change:
-			set {_tag} to "PublicBukkitValues;{@pluginname}:%{_data}%"
-		else:
-			set {_tag} to "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_data}%"
-		
-		set {_nbt} to expr-3 {_tag} of nbt of expr-1
-		return {_nbt}
-
-condition %itemstack% has [string] [custom] [nbt[ tag]] data %string% [(as|[set] to) %-string%]:
-	check:
-		set {_item} to expr-1
-		set {_name} to expr-2
-		if expr-3 is set:
-			set {_value} to expr-3
-		if {_value} is not set:
-			if server is not at api change:
-				nbt compound of expr-1 has tag "PublicBukkitValues;{@pluginname}:%{_name}%"
-				continue
-			else:
-				nbt compound of expr-1 has tag "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%"
-				continue
-		else:
-			if server is not at api change:
-				if nbt compound of expr-1 doesn't have tag "PublicBukkitValues;{@pluginname}:%{_name}%":
-					stop
-			else:
-				if nbt compound of expr-1 doesn't have tag "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%":
-					stop
-			if server is not at api change:
-				set {_tag} to "PublicBukkitValues;{@pluginname}:%{_name}%"
-			else:
-				set {_tag} to "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%"
-			string tag {_tag} of nbt compound of {_item} is {_value}
-			continue
-
-condition %itemstack% (positive: has|negative: (doesn't|does not) have) [string] [custom] [nbt[ tag]] data %string% [(as|[set] to) %-string%]:
-	check:
-		if "%parse tags%" contains "positive": 
-			if expr-3 is set:
-				expr-1 has string tag data expr-2 set to expr-3
-				continue
-			else:
-				expr-1 has string tag data expr-2
-				continue
-		else:
-			if expr-3 is set:
-				expr-1 doesn't have string tag data expr-2 set to expr-3
-				continue
-			else:
-				expr-1 doesn't have string tag data expr-2
-				continue
-
-condition %itemstack% (positive: has|negative: (doesn't|does not) have) (int[eger]|number) [custom] [nbt[ tag]] data %string% [(as|[set] to) %-int%]:
-	check:
-		if "%parse tags%" contains "positive": 
-			if expr-3 is set:
-				expr-1 has int tag data expr-2 set to expr-3
-				continue
-			else:
-				expr-1 has int tag data expr-2
-				continue
-		else:
-			if expr-3 is set:
-				expr-1 doesn't have int tag data expr-2 set to expr-3
-				continue
-			else:
-				expr-1 doesn't have int tag data expr-2
-				continue
-
-condition %itemstack% (positive: has|negative: (doesn't|does not) have) %nbttype% [custom] [nbt[ tag]] data %string% [(as|[set] to) %-object%]:
-	check:
-		if "%parse tags%" contains "positive": 
-			expr-1's expr-3 expr-2 data is set
-			if expr-4 is set:
-				expr-1's expr-3 expr-2 is expr-4
-				continue
-			else:
-				continue
-		else:
-			expr-1's expr-3 expr-2 data is not set
-			if expr-4 is set:
-				expr-1's expr-3 expr-2 is not expr-4
-				continue
-			else:
-				continue
-
-#Simple tab syntax for items, used to store data easily
-expression %itemtype% with %nbttype% [custom] [nbt[ tag]] data %string% (as|to| set to) %object%:
-	return type: item
-	get:
-		set {_item} to expr-1
-		set {_name} to expr-3
-		set {_value} to expr-4
-		if server is not at api change:
-			set expr-2 "PublicBukkitValues;{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
-		else:
-			set expr-2 "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
-		return {_item}
-
-expression %itemtype% with [string] [custom] [nbt[ tag]] data %string% (as|to| set to) %string%:
-	return type: item
-	get:
-		return expr-1 with string tag data expr-2 set to expr-3
-
-expression %itemtype% with (int[eger]|number) [custom] [nbt[ tag]] data %string% (as|to| set to) %integer%:
-	return type: item
-	get:
-		return expr-1 with int tag data expr-2 set to expr-3
 
 #Our own boss bar syntax, uses SkBee's boss bar system
 expression [new] boss[ ]bar [(named|(with|of) id) %-string%] [(with title|titled) %-string%] [[with (color|colour)|colo[u]red] %-color%] [(with style|styled) %-bossbarstyle%] [with progress %-number%] [lasting [for] %-timespan%] [updating every %-timespan%] [counting (:(up|down))] for %players%:
 	return type: bossbar
 	get:
-		set {_id} to expr-1 ? "%uuid of {_player}%:%random uuid%"
+		if size of {_players::*} is 1:
+			set {_id} to expr-1 ? "%uuid of {_players::1}%:%random uuid%"
+		else:
+			set {_id} to expr-1 ? "%random uuid%"
 		set {_title} to expr-2 ? "Bossbar"
 		set {_color} to expr-3 ? red
 		set {_style} to expr-4 ? solid_bar
 		set {_progress} to expr-5 ? 100
 		set {_lasting} to expr-6
 		set {_updating} to expr-7 ? 1 tick
-		set {_counting} to the first element of parse tags ? "down" #defaults to counting down
+		set {_counting} to the first element of parser tags ? "down" #defaults to counting down
 		set {_players::*} to expr-8
 		
 		#for knowing the ids, refer to this. make sure to set an id to change progress youself.
@@ -625,7 +476,7 @@ expression [new] boss[ ]bar [(named|(with|of) id) %-string%] [(with title|titled
 			updateActionBar({_bar}, {_updating}, {_lasting}, {_counting}, {_id})
 		return {_bar}
 
-function updateActionBar(bar: bossbar, updating: timespan, lasting: timespan, counting: text, id: text):
+local function updateActionBar(bar: bossbar, updating: timespan, lasting: timespan, counting: text, id: text):
 	#convert to milliseconds
 	set {_time} to ((ticks of {_lasting}) / 20) + unix timestamp of now
 	set {_change} to 100 * ((ticks of {_updating}) / (ticks of {_lasting}))
@@ -639,3 +490,100 @@ function updateActionBar(bar: bossbar, updating: timespan, lasting: timespan, co
 		wait {_updating}
 	remove bar players of {_bar} from bar players of {_bar}
 	delete boss bar with id {_id}
+
+
+#NBT
+local function getTagTypes() :: nbttypes:
+	return string tag, boolean tag, int tag, byte array tag, byte tag, compound list tag, compound tag, double list tag, double tag, float list tag, float tag, int array tag, int list tag, long list tag, long tag, short tag, string list tag, and uuid tag
+
+local function getTagTypeFromObject(object: object) :: nbttype:
+	if {_object} is a text:
+		return string tag
+	else if {_object} is a number:
+		if {_object} > 2147483647:
+			return long tag
+		return int tag
+	if {_object} is a boolean:
+		return boolean tag
+
+local function tagProperty(item: item, data: string, type: nbttype) :: object:
+	return {_item}'s {_data} {_type} data
+
+# We're not able to use the syntax within the syntax. So we have to resort to doing this.
+item property %string% ([%-nbttype%] [custom] [nbt] data|%-nbttype% [custom] [nbt] [data]):
+	get:
+		set {_item} to expr-1
+		set {_data} to expr-2
+		set {_type} to expr-3
+
+		if {_type} is set:
+			if server is not at api change:
+				set {_tag} to "PublicBukkitValues;{@pluginname}:%{_data}%"
+			else:
+				set {_tag} to "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_data}%"
+			
+			set {_nbt} to {_type} {_tag} of nbt of {_item}
+			return {_nbt}
+		else:
+			loop getTagTypes():
+				set {_returnedData} to tagProperty({_item}, {_data}, loop-value)
+				if {_returnedData} is set:
+					return {_returnedData}
+
+		return {_null}
+
+# We're not able to use the syntax within the syntax. So we have to resort to doing this.
+local function tagCondition(item: item, type: nbttype, name: string, object: object) :: boolean:
+	if {_item} has {_type} data {_name} set to {_object}:
+		return true
+	return false
+
+condition %item% (positive: has|negative: ((doesn't|does not) have)) [%-nbttype%] [custom] [nbt] data %string% [(as|[set] to) %-object%]:
+	check:
+		set {_item} to expr-1
+		set {_type} to expr-2
+		set {_name} to expr-3
+		set {_object} to expr-4
+
+		if {_type} is set:
+			if "%parser tags%" contains "positive": 
+				{_item}'s {_name} {_type} data is set
+				if {_object} is set:
+					{_item}'s {_name} {_type} is {_object}
+					continue
+				else:
+					continue
+			else:
+				{_item}'s {_name} {_type} data is not set
+				if {_object} is set:
+					{_item}'s {_name} {_type} is not {_object}
+					continue
+				else:
+					continue
+		else:
+			loop getTagTypes():
+				if tagCondition({_item}, loop-value, {_name}, {_object}) is true:
+					set {_has} to true
+					exit 2 sections
+
+			if "%parser tags%" contains "positive":
+				{_has} is set
+				continue
+			else:
+				{_has} is not set
+				continue
+
+#Simple tag syntax for items, used to store data easily
+expression ([a[n]]|[the]) %itemtype% with [%-nbttype%] [custom] [nbt] data %string% (as|to| set to) %object%:
+	return type: item
+	get:
+		set {_item} to expr-1
+		set {_name} to expr-3
+		set {_value} to expr-4
+		set {_type} to expr-2 ? getTagTypeFromObject({_value})
+
+		if server is not at api change:
+			set {_type} "PublicBukkitValues;{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
+		else:
+			set {_type} "minecraft:custom_data;PublicBukkitValues;{@pluginname}:%{_name}%" of nbt of {_item} to {_value}
+		return {_item}
